@@ -1,7 +1,7 @@
-import { NestFactory }             from '@nestjs/core';
-import { ValidationPipe }          from '@nestjs/common';
-import { AppModule }               from './app.module';
-import { AllExceptionsFilter }     from './common/filters/http-exception.filter';
+import { NestFactory }         from '@nestjs/core';
+import { ValidationPipe }      from '@nestjs/common';
+import { AppModule }           from './app.module';
+import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -12,25 +12,36 @@ async function bootstrap() {
   // Validación automática de DTOs
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist:               true,   // Elimina propiedades no declaradas en DTO
-      forbidNonWhitelisted:    true,
-      transform:               true,   // Convierte strings a tipos correctos
-      transformOptions:        { enableImplicitConversion: true },
+      whitelist:            true,
+      forbidNonWhitelisted: true,
+      transform:            true,
+      transformOptions:     { enableImplicitConversion: true },
     }),
   );
 
   // Filtro global de errores
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  // CORS para el frontend
+  // CORS — acepta el origen del frontend (variable de entorno)
+  const allowedOrigins = (process.env.FRONTEND_URL ?? 'http://localhost:5173')
+    .split(',')
+    .map((o) => o.trim());
+
   app.enableCors({
-    origin:  process.env.FRONTEND_URL ?? 'http://localhost:5173',
-    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+    origin:      allowedOrigins,
+    methods:     ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    credentials: true,
+  });
+
+  // Endpoint de salud — usado por Render para health checks y keep-alive
+  const httpAdapter = app.getHttpAdapter();
+  httpAdapter.get('/health', (_req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
   const port = process.env.PORT ?? 3001;
-  await app.listen(port);
-  console.log(`🚀 Backend corriendo en http://localhost:${port}/api/v1`);
+  await app.listen(port, '0.0.0.0');
+  console.log(`🚀 Backend corriendo en http://0.0.0.0:${port}/api/v1`);
 }
 
 bootstrap();

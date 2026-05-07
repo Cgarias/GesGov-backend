@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: gesgov-backend
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: MONGODB_URI
+        sync: false          # Se configura manualmente en el panel de Render
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: FRONTEND_URL
+        sync: false          # URL de Vercel — se configura después del deploy
+      - key: MAX_FILE_SIZE_MB
+        value: 10
+      - key: UPLOAD_PATH
+        value: ./uploads
