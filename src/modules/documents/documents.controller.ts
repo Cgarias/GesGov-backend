@@ -8,6 +8,7 @@ import {
   Body,
   UploadedFile,
   UseInterceptors,
+  UseGuards,
   HttpCode,
   HttpStatus,
   ParseFilePipe,
@@ -20,10 +21,12 @@ import { extname }         from 'path';
 import { DocumentsService } from './documents.service';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
+import { JwtAuthGuard }      from '../../common/guards/jwt-auth.guard';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 @Controller('documents')
+@UseGuards(JwtAuthGuard)   // ← Todas las rutas requieren token
 export class DocumentsController {
 
   constructor(private readonly documentsService: DocumentsService) {}

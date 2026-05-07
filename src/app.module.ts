@@ -2,13 +2,12 @@ import { Module }                      from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule }              from '@nestjs/mongoose';
 import { DocumentsModule }             from './modules/documents/documents.module';
+import { AuthModule }                  from './modules/auth/auth.module';
 
 @Module({
   imports: [
-    // Variables de entorno disponibles globalmente
     ConfigModule.forRoot({ isGlobal: true }),
 
-    // Conexión a MongoDB Atlas con variables de entorno
     MongooseModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -16,6 +15,7 @@ import { DocumentsModule }             from './modules/documents/documents.modul
       }),
     }),
 
+    AuthModule,
     DocumentsModule,
   ],
 })
