@@ -1,14 +1,19 @@
-# GesGov — Backend
+# GesGov Backend
 
-API REST construida con NestJS para el sistema de gestión documental de la Alcaldía Municipal.
+> API REST para el Sistema de Gestión Documental de la Alcaldía Municipal.
 
-## Stack
+[![NestJS](https://img.shields.io/badge/NestJS-11.0-E0234E?logo=nestjs)](https://nestjs.com)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.1-3178C6?logo=typescript)](https://typescriptlang.org)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb)](https://mongodb.com/atlas)
+[![Deploy](https://img.shields.io/badge/Deploy-Render-46E3B7?logo=render)](https://render.com)
 
-- **Framework**: NestJS 11 + TypeScript
-- **Base de datos**: MongoDB Atlas (Mongoose 8)
-- **Autenticación**: JWT + Passport
-- **Archivos**: Multer (almacenamiento en disco)
-- **Validación**: class-validator + class-transformer
+---
+
+## Descripción
+
+API REST construida con NestJS que gestiona la autenticación de usuarios y el ciclo de vida completo de documentos institucionales, incluyendo carga de archivos, cálculo automático de estados y estadísticas en tiempo real.
+
+---
 
 ## Requisitos
 
@@ -16,107 +21,119 @@ API REST construida con NestJS para el sistema de gestión documental de la Alca
 - npm 9+
 - Cuenta en MongoDB Atlas
 
-## Instalación
+---
+
+## Instalación y Ejecución
 
 ```bash
+# Instalar dependencias
 npm install
-```
 
-## Variables de Entorno
-
-Copia `.env.example` como `.env` y completa los valores:
-
-```bash
+# Configurar variables de entorno
 cp .env.example .env
-```
+# Editar .env con tus valores
 
-| Variable | Requerida | Descripción |
-|----------|-----------|-------------|
-| `PORT` | No | Puerto del servidor (default: `3001`) |
-| `MONGODB_URI` | **Sí** | URI de conexión a MongoDB Atlas |
-| `JWT_SECRET` | **Sí** | Clave secreta para firmar tokens JWT |
-| `JWT_EXPIRES_IN` | No | Duración del token (default: `8h`) |
-| `FRONTEND_URL` | No | URL del frontend para CORS (default: `http://localhost:5173`) |
-| `MAX_FILE_SIZE_MB` | No | Tamaño máximo de archivos en MB (default: `10`) |
-| `UPLOAD_PATH` | No | Ruta de almacenamiento de archivos (default: `./uploads`) |
-
-## Scripts
-
-```bash
 # Desarrollo con hot-reload
 npm run start:dev
 
 # Producción
 npm run build
 npm run start:prod
-
-# Linting
-npm run lint
-
-# Tests
-npm run test
-npm run test:cov
 ```
+
+---
+
+## Variables de Entorno
+
+| Variable | Requerida | Default | Descripción |
+|----------|-----------|---------|-------------|
+| `PORT` | No | `3001` | Puerto del servidor |
+| `MONGODB_URI` | **Sí** | — | URI de conexión a MongoDB Atlas |
+| `JWT_SECRET` | **Sí** | — | Clave secreta para firmar tokens JWT |
+| `JWT_EXPIRES_IN` | No | `8h` | Duración del token JWT |
+| `FRONTEND_URL` | No | `http://localhost:5173` | URL del frontend (CORS) |
+| `MAX_FILE_SIZE_MB` | No | `10` | Tamaño máximo de archivos en MB |
+| `UPLOAD_PATH` | No | `./uploads` | Ruta de almacenamiento de archivos |
+
+---
 
 ## Estructura del Proyecto
 
 ```
 src/
-├── main.ts                          # Bootstrap de la aplicación
-├── app.module.ts                    # Módulo raíz
+├── main.ts                              # Bootstrap: puerto, CORS, pipes, filtros
+├── app.module.ts                        # Módulo raíz: ConfigModule, MongooseModule
+│
 ├── common/
 │   ├── enums/
-│   │   └── document-status.enum.ts  # Estados de documentos
+│   │   └── document-status.enum.ts     # PENDIENTE | EN_PROCESO | POR_VENCER | VENCIDO | RESPONDIDO
 │   ├── filters/
-│   │   └── http-exception.filter.ts # Manejo global de errores
+│   │   └── http-exception.filter.ts    # Manejo global de errores HTTP
 │   ├── guards/
-│   │   └── jwt-auth.guard.ts        # Guard de autenticación JWT
+│   │   └── jwt-auth.guard.ts           # Guard reutilizable para rutas protegidas
 │   └── interceptors/
-│       └── transform.interceptor.ts # Transformación de respuestas
+│       └── transform.interceptor.ts    # Transformación uniforme de respuestas
+│
 └── modules/
-    ├── auth/                        # Módulo de autenticación
-    │   ├── auth.controller.ts
-    │   ├── auth.module.ts
-    │   ├── auth.service.ts
+    ├── auth/
+    │   ├── auth.controller.ts          # POST /login, POST /register, GET /me
+    │   ├── auth.module.ts              # Configura JWT, Passport, seed admin
+    │   ├── auth.service.ts             # Lógica: login, register, perfil, seed
     │   ├── dto/
-    │   │   ├── login.dto.ts
-    │   │   └── register.dto.ts
+    │   │   ├── login.dto.ts            # { email, password }
+    │   │   └── register.dto.ts         # { name, email, password, role?, position?, phone? }
     │   ├── schemas/
-    │   │   └── user.schema.ts
+    │   │   └── user.schema.ts          # Modelo User con roles
     │   └── strategies/
-    │       └── jwt.strategy.ts
-    └── documents/                   # Módulo de documentos
-        ├── documents.controller.ts
-        ├── documents.module.ts
-        ├── documents.service.ts
+    │       └── jwt.strategy.ts         # Valida token y adjunta user a request
+    │
+    └── documents/
+        ├── documents.controller.ts     # CRUD + upload, protegido con JwtAuthGuard
+        ├── documents.module.ts         # Importa AuthModule para el guard
+        ├── documents.service.ts        # Lógica: CRUD, computeStatus, stats
         ├── dto/
-        │   ├── create-document.dto.ts
-        │   └── update-document.dto.ts
+        │   ├── create-document.dto.ts  # { title, description?, responseDeadline?, notes? }
+        │   └── update-document.dto.ts  # Todos los campos opcionales + status
         └── schemas/
-            └── document.schema.ts
+            └── document.schema.ts      # Modelo Document con timestamps
 ```
+
+---
 
 ## API Reference
 
+### Base URL
+- **Desarrollo:** `http://localhost:3001/api/v1`
+- **Producción:** `https://gesgov-backend.onrender.com/api/v1`
+
+### Health Check
+
+```http
+GET /health
+```
+No requiere autenticación. Responde `{ "status": "ok", "timestamp": "..." }`.
+
+---
+
 ### Autenticación
 
-#### `POST /api/v1/auth/login`
-Inicia sesión y devuelve un token JWT.
+#### Login
+```http
+POST /api/v1/auth/login
+Content-Type: application/json
 
-**Body:**
-```json
 {
   "email": "admin@alcaldia.gov.co",
   "password": "Admin1234!"
 }
 ```
 
-**Respuesta:**
+**Respuesta 200:**
 ```json
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "user": {
-    "_id": "...",
+    "_id": "6641a2b3c4d5e6f7a8b9c0d1",
     "name": "Administrador",
     "email": "admin@alcaldia.gov.co",
     "role": "ADMIN",
@@ -125,24 +142,63 @@ Inicia sesión y devuelve un token JWT.
 }
 ```
 
-#### `POST /api/v1/auth/register`
-Crea un nuevo usuario.
+**Errores:**
+- `401` — Credenciales incorrectas
+- `400` — Validación fallida (email inválido, contraseña vacía)
 
-**Body:**
-```json
+---
+
+#### Registro
+```http
+POST /api/v1/auth/register
+Content-Type: application/json
+
 {
   "name": "Juan Pérez",
   "email": "jperez@alcaldia.gov.co",
   "password": "MiPassword123!",
   "role": "SECRETARY",
-  "position": "Secretario General"
+  "position": "Secretario General",
+  "phone": "+57 300 000 0000"
 }
 ```
 
-#### `GET /api/v1/auth/me` 🔒
-Devuelve el perfil del usuario autenticado.
+**Campos:**
 
-**Headers:** `Authorization: Bearer <token>`
+| Campo | Tipo | Requerido | Validación |
+|-------|------|-----------|-----------|
+| `name` | string | **Sí** | 2-100 caracteres |
+| `email` | string | **Sí** | Formato email válido, único |
+| `password` | string | **Sí** | Mínimo 8 caracteres |
+| `role` | enum | No | `ADMIN` \| `SECRETARY` \| `VIEWER` |
+| `position` | string | No | Máx. 80 caracteres |
+| `phone` | string | No | Máx. 20 caracteres |
+
+**Respuesta 201:** Mismo formato que login.
+
+**Errores:**
+- `409` — El correo ya está registrado
+- `400` — Validación fallida
+
+---
+
+#### Perfil del usuario autenticado
+```http
+GET /api/v1/auth/me
+Authorization: Bearer <token>
+```
+
+**Respuesta 200:**
+```json
+{
+  "_id": "6641a2b3c4d5e6f7a8b9c0d1",
+  "name": "Administrador",
+  "email": "admin@alcaldia.gov.co",
+  "role": "ADMIN",
+  "position": "Administrador del Sistema",
+  "phone": null
+}
+```
 
 ---
 
@@ -150,48 +206,135 @@ Devuelve el perfil del usuario autenticado.
 
 > Todos los endpoints requieren `Authorization: Bearer <token>`
 
-#### `GET /api/v1/documents`
-Lista todos los documentos. Recalcula el estado automáticamente.
+#### Listar todos los documentos
+```http
+GET /api/v1/documents
+Authorization: Bearer <token>
+```
 
-**Respuesta:** Array de documentos.
+**Respuesta 200:** Array de documentos ordenados por fecha de creación (más reciente primero). El estado se recalcula automáticamente en cada consulta.
 
-#### `GET /api/v1/documents/stats`
-Devuelve conteos agrupados por estado.
+```json
+[
+  {
+    "_id": "6641b3c4d5e6f7a8b9c0d2e3",
+    "title": "Solicitud de Presupuesto Q2",
+    "description": "Solicitud de asignación presupuestal para el segundo trimestre",
+    "fileName": "solicitud_presupuesto.pdf",
+    "filePath": "uploads/1778127684764-750212802.pdf",
+    "mimeType": "application/pdf",
+    "fileSize": 245760,
+    "responseDeadline": "2026-05-20T00:00:00.000Z",
+    "status": "EN_PROCESO",
+    "respondedAt": null,
+    "notes": "Revisar con el director financiero",
+    "createdAt": "2026-05-01T14:30:00.000Z",
+    "updatedAt": "2026-05-01T14:30:00.000Z"
+  }
+]
+```
 
-**Respuesta:**
+---
+
+#### Estadísticas
+```http
+GET /api/v1/documents/stats
+Authorization: Bearer <token>
+```
+
+**Respuesta 200:**
 ```json
 {
   "PENDIENTE": 2,
-  "EN_PROCESO": 5,
-  "POR_VENCER": 1,
-  "VENCIDO": 3,
-  "RESPONDIDO": 10
+  "EN_PROCESO": 8,
+  "POR_VENCER": 3,
+  "VENCIDO": 1,
+  "RESPONDIDO": 15
 }
 ```
 
-#### `GET /api/v1/documents/:id`
-Obtiene un documento por ID.
+---
 
-#### `POST /api/v1/documents`
-Crea un nuevo documento con archivo adjunto.
+#### Obtener un documento
+```http
+GET /api/v1/documents/:id
+Authorization: Bearer <token>
+```
 
-**Content-Type:** `multipart/form-data`
+**Respuesta 200:** Objeto documento (mismo formato que el listado).
 
-| Campo | Tipo | Requerido | Descripción |
-|-------|------|-----------|-------------|
-| `title` | string | **Sí** | Título (3-150 caracteres) |
-| `file` | File | **Sí** | Archivo (PDF, Word, Excel, JPG, PNG — máx 10MB) |
-| `description` | string | No | Descripción (máx 500 caracteres) |
-| `responseDeadline` | string (ISO 8601) | No | Fecha límite de respuesta |
-| `notes` | string | No | Notas internas (máx 500 caracteres) |
+**Errores:**
+- `404` — Documento no encontrado
 
-#### `PATCH /api/v1/documents/:id`
-Actualiza un documento.
+---
 
-**Body (JSON):** Cualquier campo de `CreateDocumentDto` + `status`.
+#### Crear documento con archivo
+```http
+POST /api/v1/documents
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
 
-#### `DELETE /api/v1/documents/:id`
-Elimina un documento (no elimina el archivo físico).
+title: "Nombre del documento"
+file: [archivo binario]
+description: "Descripción opcional"
+responseDeadline: "2026-06-15"
+notes: "Notas internas opcionales"
+```
+
+**Campos del formulario:**
+
+| Campo | Tipo | Requerido | Validación |
+|-------|------|-----------|-----------|
+| `title` | string | **Sí** | 3-150 caracteres |
+| `file` | File | **Sí** | PDF, Word, Excel, JPG, PNG — máx. 10 MB |
+| `description` | string | No | Máx. 500 caracteres |
+| `responseDeadline` | string | No | Fecha ISO 8601 (YYYY-MM-DD) |
+| `notes` | string | No | Máx. 500 caracteres |
+
+**Tipos de archivo permitidos:**
+- `application/pdf`
+- `image/jpeg`, `image/jpg`, `image/png`
+- `application/msword`
+- `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+- `application/vnd.ms-excel`
+- `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+
+**Respuesta 201:** Objeto documento creado.
+
+**Errores:**
+- `400` — Validación fallida, tipo de archivo no permitido, archivo muy grande
+- `401` — Token inválido o expirado
+
+---
+
+#### Actualizar documento
+```http
+PATCH /api/v1/documents/:id
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "title": "Nuevo título",
+  "status": "RESPONDIDO",
+  "notes": "Respondido el 15 de mayo"
+}
+```
+
+Todos los campos son opcionales. Al enviar `status: "RESPONDIDO"` se registra automáticamente la fecha en `respondedAt`.
+
+**Respuesta 200:** Objeto documento actualizado.
+
+---
+
+#### Eliminar documento
+```http
+DELETE /api/v1/documents/:id
+Authorization: Bearer <token>
+```
+
+**Respuesta 204:** Sin contenido.
+
+> **Nota:** Elimina el registro de MongoDB pero **no elimina el archivo físico** del servidor.
 
 ---
 
@@ -201,14 +344,14 @@ Elimina un documento (no elimina el archivo físico).
 
 ```typescript
 {
-  _id: ObjectId,
-  name: string,           // Nombre completo
-  email: string,          // Único, lowercase
-  password: string,       // Bcrypt hash (no se devuelve en queries)
-  role: 'ADMIN' | 'SECRETARY' | 'VIEWER',
-  isActive: boolean,
-  position?: string,      // Cargo
-  phone?: string,
+  _id:       ObjectId,
+  name:      string,          // Nombre completo (2-100 chars)
+  email:     string,          // Único, lowercase
+  password:  string,          // Bcrypt hash — nunca se devuelve en queries
+  role:      'ADMIN' | 'SECRETARY' | 'VIEWER',
+  isActive:  boolean,         // Default: true
+  position?: string,          // Cargo institucional
+  phone?:    string,
   createdAt: Date,
   updatedAt: Date
 }
@@ -218,83 +361,163 @@ Elimina un documento (no elimina el archivo físico).
 
 ```typescript
 {
-  _id: ObjectId,
-  title: string,
-  description?: string,
-  fileName: string,       // Nombre original del archivo
-  filePath: string,       // Ruta en disco: uploads/timestamp-random.ext
-  mimeType: string,
-  fileSize: number,       // Bytes
-  responseDeadline?: Date,
-  status: 'PENDIENTE' | 'EN_PROCESO' | 'POR_VENCER' | 'VENCIDO' | 'RESPONDIDO',
-  respondedAt?: Date,
-  notes?: string,
-  createdAt: Date,
-  updatedAt: Date
+  _id:               ObjectId,
+  title:             string,
+  description?:      string,
+  fileName:          string,   // Nombre original del archivo
+  filePath:          string,   // Ruta relativa: uploads/timestamp-random.ext
+  mimeType:          string,   // MIME type del archivo
+  fileSize:          number,   // Tamaño en bytes
+  responseDeadline?: Date,     // Fecha límite de respuesta
+  status:            'PENDIENTE' | 'EN_PROCESO' | 'POR_VENCER' | 'VENCIDO' | 'RESPONDIDO',
+  respondedAt?:      Date,     // Se registra al marcar como RESPONDIDO
+  notes?:            string,   // Notas internas
+  createdAt:         Date,
+  updatedAt:         Date
 }
 ```
 
-## Lógica de Estados
+---
 
-El estado se calcula automáticamente al crear o consultar documentos:
+## Lógica de Cálculo de Estado
+
+El método `computeStatus()` en `DocumentsService` determina el estado:
+
+```typescript
+private computeStatus(deadline?: Date, currentStatus?: DocumentStatus): DocumentStatus {
+  // RESPONDIDO es permanente — nunca cambia
+  if (currentStatus === DocumentStatus.RESPONDIDO) return DocumentStatus.RESPONDIDO;
+
+  // Sin fecha límite → PENDIENTE
+  if (!deadline) return DocumentStatus.PENDIENTE;
+
+  const daysLeft = Math.ceil((deadline.getTime() - Date.now()) / 86400000);
+
+  if (daysLeft < 0)  return DocumentStatus.VENCIDO;     // Fecha superada
+  if (daysLeft <= 3) return DocumentStatus.POR_VENCER;  // ≤ 3 días
+  return DocumentStatus.EN_PROCESO;                      // > 3 días
+}
+```
+
+Este método se ejecuta:
+1. Al **crear** un documento
+2. Al **listar** todos los documentos (`findAll`)
+3. Al **obtener** un documento individual (`findOne`)
+
+Si el estado calculado difiere del almacenado, se actualiza automáticamente en MongoDB.
+
+---
+
+## Autenticación JWT
+
+### Flujo
 
 ```
-Sin fecha límite          → PENDIENTE
-Fecha límite > 3 días     → EN_PROCESO
-Fecha límite ≤ 3 días     → POR_VENCER
-Fecha límite superada     → VENCIDO
-Marcado manualmente       → RESPONDIDO (no cambia)
+1. Cliente envía POST /auth/login con { email, password }
+2. AuthService busca el usuario en MongoDB (con +password)
+3. bcrypt.compare() verifica la contraseña
+4. JwtService.sign() genera el token con payload { sub, email, role }
+5. Se devuelve { accessToken, user }
+6. Cliente incluye el token en cada petición: Authorization: Bearer <token>
+7. JwtStrategy.validate() verifica el token y carga el usuario
+8. El usuario queda disponible en request.user
 ```
+
+### Payload del Token
+
+```json
+{
+  "sub": "6641a2b3c4d5e6f7a8b9c0d1",
+  "email": "admin@alcaldia.gov.co",
+  "role": "ADMIN",
+  "iat": 1746000000,
+  "exp": 1746028800
+}
+```
+
+---
 
 ## Almacenamiento de Archivos
 
 Los archivos se guardan en `./uploads/` con el formato:
 ```
-{timestamp}-{número_aleatorio}.{extensión}
+{timestamp_ms}-{número_aleatorio}.{extensión_original}
 ```
 
 Ejemplo: `1778127684764-750212802.pdf`
 
-> **Nota para producción:** Para despliegues en la nube, considera migrar a un servicio de almacenamiento de objetos como AWS S3, Google Cloud Storage o Cloudinary, ya que el almacenamiento en disco no persiste entre reinicios de contenedores sin un volumen montado.
+La ruta relativa se almacena en el campo `filePath` del documento.
+
+> **Para producción en la nube:** Render no tiene almacenamiento persistente en el plan gratuito. Los archivos se pierden al reiniciar el servicio. Para persistencia real, migrar a AWS S3, Google Cloud Storage o Cloudinary.
+
+---
 
 ## Usuario Administrador por Defecto
 
-Al arrancar, si la colección `users` está vacía, se crea automáticamente:
+Al arrancar, si la colección `users` está vacía, `AuthModule.onModuleInit()` ejecuta `seedAdmin()`:
 
-- **Email:** `admin@alcaldia.gov.co`
-- **Contraseña:** `Admin1234!`
-- **Rol:** `ADMIN`
-
-> Cambia la contraseña después del primer acceso.
-
-## Despliegue con Docker
-
-```bash
-# Construir imagen
-docker build -t gesgov-backend .
-
-# Ejecutar contenedor
-docker run -d \
-  -p 3001:3001 \
-  -e MONGODB_URI="mongodb+srv://..." \
-  -e JWT_SECRET="tu_secret_seguro" \
-  -e FRONTEND_URL="https://tu-frontend.com" \
-  -v uploads_data:/app/uploads \
-  --name gesgov-backend \
-  gesgov-backend
+```
+Email:     admin@alcaldia.gov.co
+Password:  Admin1234!
+Rol:       ADMIN
 ```
 
-O usar Docker Compose desde la raíz del proyecto:
+> Cambia la contraseña después del primer acceso en producción.
+
+---
+
+## Scripts Disponibles
 
 ```bash
-docker compose up -d --build backend
+npm run start:dev    # Desarrollo con hot-reload (ts-node + watch)
+npm run build        # Compilar TypeScript → dist/
+npm run start:prod   # Ejecutar build compilado
+npm run lint         # ESLint
+npm run test         # Jest unit tests
+npm run test:cov     # Tests con cobertura
 ```
 
-## Despliegue en Railway / Render
+---
 
-1. Conecta el repositorio
-2. Configura las variables de entorno en el panel de la plataforma
-3. El comando de inicio es: `npm run start:prod`
-4. El comando de build es: `npm run build`
+## Despliegue en Render
 
-> **Importante:** Configura un volumen persistente para `/app/uploads` si usas almacenamiento en disco.
+### Configuración del servicio
+
+| Campo | Valor |
+|-------|-------|
+| Runtime | Node |
+| Build Command | `npm install --include=dev && npm run build` |
+| Start Command | `npm run start:prod` |
+| Node Version | 20.x |
+
+### Variables de entorno requeridas en Render
+
+```
+NODE_ENV=production
+PORT=3001
+MONGODB_URI=<tu URI de Atlas>
+JWT_SECRET=<clave secreta larga>
+JWT_EXPIRES_IN=8h
+FRONTEND_URL=<URL de Vercel>
+MAX_FILE_SIZE_MB=10
+UPLOAD_PATH=./uploads
+```
+
+### Health Check
+
+Render verifica el servicio en: `GET /health`
+
+---
+
+## CORS
+
+El backend acepta peticiones del origen configurado en `FRONTEND_URL`. En producción, esta variable debe contener la URL exacta de Vercel:
+
+```
+FRONTEND_URL=https://gesgov-frontend.vercel.app
+```
+
+Para múltiples orígenes, sepáralos con comas:
+```
+FRONTEND_URL=https://gesgov.vercel.app,https://gesgov-preview.vercel.app
+```
